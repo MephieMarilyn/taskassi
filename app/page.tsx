@@ -14,21 +14,23 @@ export default function Home() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [newTask, setNewTask] = useState({ title: "", description: "", dueDate: "" });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null); // Added error state
-  const [success, setSuccess] = useState<string | null>(null); // Added success state
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    async function fetchTasks() {
+    const fetchTasks = async () => {
       setLoading(true);
-      setError(null); // Reset errors on each fetch
+      setError(null);
       try {
         const fetchedTasks = await getTasks();
         setTasks(fetchedTasks);
-      } catch (error) {
-        setError("Failed to fetch tasks. Please try again.");
+      } catch (err) {
+        console.error("Error fetching tasks:", err);
+        setError(err instanceof Error ? err.message : "Failed to fetch tasks. Please try again.");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    }
+    };
     fetchTasks();
   }, []);
 
@@ -39,42 +41,51 @@ export default function Home() {
     }
 
     setLoading(true);
-    setError(null); // Reset errors on each creation attempt
+    setError(null);
+    setSuccess(null);
     try {
       const task = await createTask(newTask.title, newTask.description, newTask.dueDate);
-      setTasks(prev => [...prev, task]); // Update UI state
+      setTasks((prev) => [...prev, task]);
       setNewTask({ title: "", description: "", dueDate: "" });
       setSuccess("Task created successfully!");
-    } catch (error) {
+    } catch (err) {
+      console.error("Error creating task:", err);
       setError("Failed to create task. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleToggleComplete = async (id: string, completed: boolean) => {
     setLoading(true);
-    setError(null); // Reset errors
+    setError(null);
+    setSuccess(null);
     try {
       const updatedTask = await updateTask(id, !completed);
-      setTasks(prev => prev.map(task => task._id === id ? updatedTask : task));
+      setTasks((prev) => prev.map((task) => (task._id === id ? updatedTask : task)));
       setSuccess("Task updated successfully!");
-    } catch (error) {
+    } catch (err) {
+      console.error("Error updating task:", err);
       setError("Failed to update task. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleDeleteTask = async (id: string) => {
     setLoading(true);
-    setError(null); // Reset errors
+    setError(null);
+    setSuccess(null);
     try {
       await deleteTask(id);
-      setTasks(prev => prev.filter(task => task._id !== id)); // Remove from UI state
+      setTasks((prev) => prev.filter((task) => task._id !== id));
       setSuccess("Task deleted successfully!");
-    } catch (error) {
+    } catch (err) {
+      console.error("Error deleting task:", err);
       setError("Failed to delete task. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -121,9 +132,11 @@ export default function Home() {
           <p className="text-white text-center">Loading tasks...</p>
         ) : (
           <ul className="space-y-4">
-            {tasks.map(task => (
+            {tasks.map((task) => (
               <li key={task._id} className="flex justify-between items-center bg-white bg-opacity-30 p-3 rounded-md">
-                <span className="text-white">{task.title} - {task.completed ? "✅" : "❌"}</span>
+                <span className="text-white">
+                  {task.title} - {task.completed ? "✅" : "❌"}
+                </span>
                 <div className="space-x-2">
                   <button
                     onClick={() => handleToggleComplete(task._id, task.completed)}
